@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ajedrez</groupId>
+    <artifactId>modelador-ajedrez</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>Modelador de Ajedrez (multi-modulo)</name>
+    <description>
+        Agregador de los modulos del modelador de ajedrez. Cada modulo es
+        hoy un jar de Java independiente con su propio pom.xml y sus
+        propias dependencias explicitas entre si; no hay clases
+        compartidas fuera de sus fachadas publicas. Esto es lo que
+        permite que, mas adelante, cada uno se extraiga a su propio
+        repositorio/proceso y gane una capa HTTP (por ejemplo con
+        Spring Boot o Javalin) sin reescribir su logica interna.
+    </description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <modules>
+        <module>tablero-service</module>
+        <module>movimientos-service</module>
+        <module>partida-service</module>
+    </modules>
+
+</project>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.ajedrez</groupId>
+        <artifactId>modelador-ajedrez</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>partida-service</artifactId>
+    <packaging>jar</packaging>
+
+    <name>partida-service</name>
+    <description>
+        Bounded context: orquestacion de la partida. Coordina
+        tablero-service y movimientos-service; lleva el turno actual, el
+        historial de jugadas y las piezas capturadas. Incluye el punto
+        de entrada de consola (Main).
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ajedrez</groupId>
+            <artifactId>tablero-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ajedrez</groupId>
+            <artifactId>movimientos-service</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>partida-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>ajedrez.partida.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

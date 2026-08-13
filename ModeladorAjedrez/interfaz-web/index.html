@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelador de Ajedrez — Visualizador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B1B2E;
+    --grid-line: #17324f;
+    --panel: #0F2440;
+    --panel-border: #1E3E5E;
+    --light-sq: #EDE6D3;
+    --dark-sq: #86b4e9;
+    --amber: #D9A544;
+    --rust: #B5523A;
+    --ink: #EAF1F7;
+    --ink-dim: #93AEC6;
+    --blueprint: #7FA8C9;
+    --white-piece: #57544e;
+    --black-piece: #10202F;
+    --radius: 6px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 28px 28px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 28px 28px,
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  header{
+    padding: 28px clamp(16px, 4vw, 48px) 8px;
+    border-bottom: 1px solid var(--grid-line);
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--blueprint);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px; height:8px;
+    background:var(--amber);
+    display:inline-block;
+    transform:rotate(45deg);
+  }
+
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: clamp(24px, 3.2vw, 34px);
+    margin: 6px 0 4px;
+    letter-spacing:-0.01em;
+  }
+
+  .subhead{
+    font-size:14px;
+    color:var(--ink-dim);
+    max-width:640px;
+    line-height:1.5;
+    margin-bottom:18px;
+  }
+  .subhead code{
+    font-family:'JetBrains Mono', monospace;
+    background:rgba(127,168,201,0.12);
+    padding:1px 5px;
+    border-radius:3px;
+    color:var(--blueprint);
+  }
+
+  main{
+    display:grid;
+    grid-template-columns: minmax(320px, 620px) minmax(280px, 380px);
+    gap: 32px;
+    padding: 24px clamp(16px, 4vw, 48px) 48px;
+    align-items:start;
+    justify-content:center;
+  }
+
+  @media (max-width: 880px){
+    main{ grid-template-columns: 1fr; justify-items:center; }
+  }
+
+  /* ---- Board column ---- */
+  .board-col{ width:100%; max-width:620px; }
+
+  .board-topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .turn-indicator{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:600;
+  }
+  .turn-dot{
+    width:14px; height:14px;
+    border-radius:50%;
+    border:2px solid var(--amber);
+    transition: background 0.2s ease;
+  }
+  .turn-dot.blanco{ background:var(--white-piece); }
+  .turn-dot.negro{ background:var(--black-piece); }
+
+  button.reset{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.04em;
+    background:transparent;
+    color:var(--amber);
+    border:1px solid var(--amber);
+    padding:7px 12px;
+    border-radius:4px;
+    cursor:pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  button.reset:hover{ background:var(--amber); color:#1a1206; }
+  button.reset:focus-visible, .sq:focus-visible{
+    outline: 2px solid var(--amber);
+    outline-offset:2px;
+  }
+
+  .board-frame{
+    position:relative;
+    background: var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: clamp(10px, 2vw, 20px);
+  }
+
+  .board-grid{
+    display:grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width:100%;
+    aspect-ratio: 1 / 1;
+    border:2px solid var(--panel-border);
+    border-radius:4px;
+    overflow:hidden;
+  }
+
+  .sq{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    font-size: clamp(20px, 4.2vw, 38px);
+    line-height:1;
+    user-select:none;
+    transition: filter 0.12s ease;
+  }
+  .sq.light{ background:var(--light-sq); }
+  .sq.dark{ background:var(--dark-sq); }
+  .sq:hover{ filter:brightness(1.08); }
+
+  .sq .piece.blanco{ color:var(--white-piece); text-shadow: 0 1px 2px rgba(0,0,0,0.55); }
+  .sq .piece.negro{ color:var(--black-piece); text-shadow: 0 1px 0 rgba(255,255,255,0.15); }
+
+  .sq.selected{ box-shadow: inset 0 0 0 3px var(--amber); }
+
+  .sq.move-empty::after{
+    content:"";
+    position:absolute;
+    width:26%; height:26%;
+    border-radius:50%;
+    background: rgba(217,165,68,0.65);
+  }
+  .sq.move-capture::after{
+    content:"";
+    position:absolute;
+    inset:8%;
+    border-radius:50%;
+    box-shadow: inset 0 0 0 3px var(--rust);
+  }
+
+  .coords-file, .coords-rank{
+    position:absolute;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--blueprint);
+    opacity:0.8;
+  }
+
+  .board-caption{
+    margin-top:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink-dim);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+
+  .trays{
+    display:flex;
+    justify-content:space-between;
+    margin-top:14px;
+    gap:12px;
+  }
+  .tray{
+    flex:1;
+    background:rgba(127,168,201,0.06);
+    border:1px dashed var(--panel-border);
+    border-radius:6px;
+    padding:8px 10px;
+    min-height:34px;
+  }
+  .tray-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-dim);
+    display:block;
+    margin-bottom:4px;
+  }
+  .tray-pieces{ font-size:18px; letter-spacing:2px; }
+  .tray-pieces .blanco{ color:var(--white-piece); }
+  .tray-pieces .negro{ color:var(--blueprint); }
+
+  /* ---- Sidebar ---- */
+  .sidebar{ width:100%; display:flex; flex-direction:column; gap:18px; }
+
+  .panel{
+    background: var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:18px 20px;
+  }
+
+  .panel h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--blueprint);
+    margin:0 0 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .panel h2::before{
+    content:"";
+    flex:0 0 16px;
+    height:1px;
+    background:var(--blueprint);
+  }
+
+  .inspector-empty{
+    font-size:13px;
+    color:var(--ink-dim);
+    line-height:1.6;
+  }
+
+  .inspector-body{ display:none; }
+  .inspector-body.active{ display:block; }
+
+  .insp-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    padding:6px 0;
+    border-bottom:1px solid var(--grid-line);
+  }
+  .insp-row:last-of-type{ border-bottom:none; }
+  .insp-key{ color:var(--ink-dim); }
+  .insp-val{ font-family:'JetBrains Mono', monospace; color:var(--ink); text-align:right; }
+
+  .class-path{
+    margin-top:12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    background:rgba(217,165,68,0.08);
+    border-left:2px solid var(--amber);
+    padding:8px 10px;
+    color:var(--amber);
+    word-break:break-all;
+  }
+
+  .rule-desc{
+    margin-top:10px;
+    font-size:12.5px;
+    line-height:1.6;
+    color:var(--ink-dim);
+  }
+
+  .log-list{
+    list-style:none;
+    margin:0; padding:0;
+    max-height:220px;
+    overflow-y:auto;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+  }
+  .log-list li{
+    padding:5px 0;
+    border-bottom:1px solid var(--grid-line);
+    color:var(--ink-dim);
+    display:flex;
+    gap:8px;
+  }
+  .log-list li:last-child{ color:var(--ink); }
+  .log-list .idx{ color:var(--blueprint); flex:0 0 26px; }
+  .log-empty{ color:var(--ink-dim); font-size:12.5px; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--panel-border); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ajedrez.core · ajedrez.features</div>
+  <h1>Modelador de Ajedrez</h1>
+  <p class="subhead">
+    Interfaz visual sobre el modelo original en Java. Cada pieza del tablero sigue
+    exactamente la lógica definida en su clase — <code>movimientosPosibles(Tablero)</code> —
+    dentro de <code>src/ajedrez</code>. Selecciona una pieza para ver su ficha técnica.
+  </p>
+</header>
+
+<main>
+  <section class="board-col">
+    <div class="board-topbar">
+      <div class="turn-indicator">
+        <span class="turn-dot blanco" id="turnDot"></span>
+        <span id="turnText">Turno: Blancas</span>
+      </div>
+      <button class="reset" id="resetBtn">↺ Reiniciar tablero</button>
+    </div>
+
+    <div class="board-frame">
+      <div class="board-grid" id="board" role="grid" aria-label="Tablero de ajedrez"></div>
+    </div>
+
+    <div class="trays">
+      <div class="tray">
+        <span class="tray-label">Capturadas — Blancas</span>
+        <div class="tray-pieces blanco" id="trayBlanco">—</div>
+      </div>
+      <div class="tray">
+        <span class="tray-label">Capturadas — Negras</span>
+        <div class="tray-pieces negro" id="trayNegro">—</div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="panel">
+      <h2>Ficha técnica</h2>
+      <div class="inspector-empty" id="inspectorEmpty">
+        Ninguna pieza seleccionada. Haz clic sobre una pieza propia para inspeccionar
+        la clase que gobierna su movimiento.
+      </div>
+      <div class="inspector-body" id="inspectorBody">
+        <div class="insp-row"><span class="insp-key">Pieza</span><span class="insp-val" id="inspNombre">—</span></div>
+        <div class="insp-row"><span class="insp-key">Color</span><span class="insp-val" id="inspColor">—</span></div>
+        <div class="insp-row"><span class="insp-key">Símbolo</span><span class="insp-val" id="inspSimbolo">—</span></div>
+        <div class="insp-row"><span class="insp-key">Posición</span><span class="insp-val" id="inspPos">—</span></div>
+        <div class="insp-row"><span class="insp-key">Movimientos legales</span><span class="insp-val" id="inspCount">—</span></div>
+        <div class="class-path" id="inspClase">ajedrez.features.piezas.Torre</div>
+        <p class="rule-desc" id="inspDesc">—</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Registro de jugadas</h2>
+      <ol class="log-list" id="log">
+        <li class="log-empty" style="list-style:none; border:none;">Sin jugadas todavía.</li>
+      </ol>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     Modelo — traducción directa de src/ajedrez a JavaScript.
+     Misma estructura: core (Posicion, Tablero, Pieza) +
+     features/piezas (Peon, Torre, Caballo, Alfil, Reina, Rey).
+     ========================================================= */
+
+  const BLANCO = "BLANCO";
+  const NEGRO = "NEGRO";
+  function contrario(color){ return color === BLANCO ? NEGRO : BLANCO; }
+
+  class Posicion {
+    constructor(fila, columna){ this.fila = fila; this.columna = columna; }
+    esValida(){ return this.fila >= 0 && this.fila < 8 && this.columna >= 0 && this.columna < 8; }
+    equals(otra){ return otra && this.fila === otra.fila && this.columna === otra.columna; }
+    toString(){
+      const letra = String.fromCharCode(97 + this.columna);
+      const numero = 8 - this.fila;
+      return letra + numero;
+    }
+  }
+
+  class Tablero {
+    constructor(){
+      this.casillas = Array.from({length:8}, () => new Array(8).fill(null));
+    }
+    colocarPieza(pieza){
+      const pos = pieza.posicion;
+      this.casillas[pos.fila][pos.columna] = pieza;
+    }
+    obtenerPieza(pos){
+      if (!pos.esValida()) return null;
+      return this.casillas[pos.fila][pos.columna];
+    }
+    estaVacia(pos){ return this.obtenerPieza(pos) === null; }
+    hayPiezaEnemigaEn(pos, colorPropio){
+      const p = this.obtenerPieza(pos);
+      return p !== null && p.color !== colorPropio;
+    }
+    moverPieza(origen, destino){
+      const pieza = this.obtenerPieza(origen);
+      if (!pieza) return null;
+      this.casillas[origen.fila][origen.columna] = null;
+      const capturada = this.obtenerPieza(destino);
+      pieza.moverA(destino);
+      this.casillas[destino.fila][destino.columna] = pieza;
+      return capturada;
+    }
+  }
+
+  class Pieza {
+    constructor(color, posicion){ this.color = color; this.posicion = posicion; }
+    moverA(nuevaPosicion){ this.posicion = nuevaPosicion; }
+    movimientosPosibles(tablero){ throw new Error("abstracto"); }
+    getSimbolo(){ throw new Error("abstracto"); }
+    getClaseJava(){ throw new Error("abstracto"); }
+    getDescripcion(){ throw new Error("abstracto"); }
+  }
+
+  class Peon extends Pieza {
+    constructor(color, posicion){ super(color, posicion); this.primerMovimiento = true; }
+    movimientosPosibles(tablero){
+      const movimientos = [];
+      const direccion = (this.color === BLANCO) ? -1 : 1;
+
+      const unPaso = new Posicion(this.posicion.fila + direccion, this.posicion.columna);
+      if (unPaso.esValida() && tablero.estaVacia(unPaso)){
+        movimientos.push(unPaso);
+        if (this.primerMovimiento){
+          const dosPasos = new Posicion(this.posicion.fila + 2*direccion, this.posicion.columna);
+          if (dosPasos.esValida() && tablero.estaVacia(dosPasos)) movimientos.push(dosPasos);
+        }
+      }
+      const columnasCaptura = [this.posicion.columna - 1, this.posicion.columna + 1];
+      for (const col of columnasCaptura){
+        const diagonal = new Posicion(this.posicion.fila + direccion, col);
+        if (diagonal.esValida() && tablero.hayPiezaEnemigaEn(diagonal, this.color)) movimientos.push(diagonal);
+      }
+      return movimientos;
+    }
+    moverA(nuevaPosicion){ super.moverA(nuevaPosicion); this.primerMovimiento = false; }
+    getSimbolo(){ return "P"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Peon"; }
+    getDescripcion(){ return "Se mueve 1 casilla hacia adelante (2 si es su primer movimiento). Captura solo en diagonal."; }
+  }
+
+  class Torre extends Pieza {
+    movimientosPosibles(tablero){
+      const movimientos = [];
+      const direcciones = [[-1,0],[1,0],[0,-1],[0,1]];
+      for (const [df, dc] of direcciones){
+        let fila = this.posicion.fila + df;
+        let col = this.posicion.columna + dc;
+        while (new Posicion(fila, col).esValida()){
+          const actual = new Posicion(fila, col);
+          if (tablero.estaVacia(actual)){
+            movimientos.push(actual);
+          } else {
+            if (tablero.hayPiezaEnemigaEn(actual, this.color)) movimientos.push(actual);
+            break;
+          }
+          fila += df; col += dc;
+        }
+      }
+      return movimientos;
+    }
+    getSimbolo(){ return "T"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Torre"; }
+    getDescripcion(){ return "Se mueve en línea recta: horizontal o vertical, cuantas casillas quiera."; }
+  }
+
+  class Alfil extends Pieza {
+    movimientosPosibles(tablero){
+      const movimientos = [];
+      const direcciones = [[-1,-1],[-1,1],[1,-1],[1,1]];
+      for (const [df, dc] of direcciones){
+        let fila = this.posicion.fila + df;
+        let col = this.posicion.columna + dc;
+        while (new Posicion(fila, col).esValida()){
+          const actual = new Posicion(fila, col);
+          if (tablero.estaVacia(actual)){
+            movimientos.push(actual);
+          } else {
+            if (tablero.hayPiezaEnemigaEn(actual, this.color)) movimientos.push(actual);
+            break;
+          }
+          fila += df; col += dc;
+        }
+      }
+      return movimientos;
+    }
+    getSimbolo(){ return "A"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Alfil"; }
+    getDescripcion(){ return "Se mueve en diagonal, cuantas casillas quiera."; }
+  }
+
+  class Caballo extends Pieza {
+    movimientosPosibles(tablero){
+      const movimientos = [];
+      const saltos = [[-2,-1],[-2,1],[2,-1],[2,1],[-1,-2],[-1,2],[1,-2],[1,2]];
+      for (const [df, dc] of saltos){
+        const destino = new Posicion(this.posicion.fila + df, this.posicion.columna + dc);
+        if (destino.esValida()){
+          if (tablero.estaVacia(destino) || tablero.hayPiezaEnemigaEn(destino, this.color)) movimientos.push(destino);
+        }
+      }
+      return movimientos;
+    }
+    getSimbolo(){ return "C"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Caballo"; }
+    getDescripcion(){ return "Se mueve en forma de \"L\": 2 casillas en una dirección + 1 perpendicular. Es la única pieza que salta sobre otras."; }
+  }
+
+  class Reina extends Pieza {
+    movimientosPosibles(tablero){
+      const comoTorre = new Torre(this.color, this.posicion);
+      const comoAlfil = new Alfil(this.color, this.posicion);
+      return [...comoTorre.movimientosPosibles(tablero), ...comoAlfil.movimientosPosibles(tablero)];
+    }
+    getSimbolo(){ return "D"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Reina"; }
+    getDescripcion(){ return "Se mueve como Torre + Alfil combinados: recto o en diagonal, reutilizando esos movimientos."; }
+  }
+
+  class Rey extends Pieza {
+    movimientosPosibles(tablero){
+      const movimientos = [];
+      const direcciones = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+      for (const [df, dc] of direcciones){
+        const destino = new Posicion(this.posicion.fila + df, this.posicion.columna + dc);
+        if (destino.esValida()){
+          if (tablero.estaVacia(destino) || tablero.hayPiezaEnemigaEn(destino, this.color)) movimientos.push(destino);
+        }
+      }
+      return movimientos;
+    }
+    getSimbolo(){ return "R"; }
+    getClaseJava(){ return "ajedrez.features.piezas.Rey"; }
+    getDescripcion(){ return "Se mueve una sola casilla en cualquier dirección."; }
+  }
+
+  const SIMBOLOS_UNICODE = {
+    BLANCO: { P:"♙", T:"♖", C:"♘", A:"♗", D:"♕", R:"♔" },
+    NEGRO:  { P:"♟", T:"♜", C:"♞", A:"♝", D:"♛", R:"♚" }
+  };
+
+  /* =========================================================
+     Estado del juego e interfaz
+     ========================================================= */
+
+  let tablero, turno, seleccion, movimientosDisponibles, capturadas, jugada;
+
+  function posicionInicial(){
+    tablero = new Tablero();
+    turno = BLANCO;
+    seleccion = null;
+    movimientosDisponibles = [];
+    capturadas = { BLANCO: [], NEGRO: [] };
+    jugada = 1;
+
+    const orden = [Torre, Caballo, Alfil, Reina, Rey, Alfil, Caballo, Torre];
+    orden.forEach((Clase, col) => {
+      tablero.colocarPieza(new Clase(NEGRO, new Posicion(0, col)));
+      tablero.colocarPieza(new Clase(BLANCO, new Posicion(7, col)));
+    });
+    for (let col = 0; col < 8; col++){
+      tablero.colocarPieza(new Peon(NEGRO, new Posicion(1, col)));
+      tablero.colocarPieza(new Peon(BLANCO, new Posicion(6, col)));
+    }
+  }
+
+  const boardEl = document.getElementById("board");
+  const turnDot = document.getElementById("turnDot");
+  const turnText = document.getElementById("turnText");
+  const inspectorEmpty = document.getElementById("inspectorEmpty");
+  const inspectorBody = document.getElementById("inspectorBody");
+  const logEl = document.getElementById("log");
+  const trayBlanco = document.getElementById("trayBlanco");
+  const trayNegro = document.getElementById("trayNegro");
+
+  function squareKey(f,c){ return f + "_" + c; }
+
+  function render(){
+    boardEl.innerHTML = "";
+    for (let f = 0; f < 8; f++){
+      for (let c = 0; c < 8; c++){
+        const pos = new Posicion(f,c);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "sq " + (((f+c) % 2 === 0) ? "light" : "dark");
+        btn.dataset.fila = f;
+        btn.dataset.col = c;
+        btn.setAttribute("aria-label", pos.toString());
+
+        const pieza = tablero.obtenerPieza(pos);
+        if (pieza){
+          const span = document.createElement("span");
+          span.className = "piece " + pieza.color.toLowerCase();
+          span.textContent = SIMBOLOS_UNICODE[pieza.color][pieza.getSimbolo()];
+          btn.appendChild(span);
+        }
+
+        if (seleccion && seleccion.fila === f && seleccion.columna === c){
+          btn.classList.add("selected");
+        }
+        const mv = movimientosDisponibles.find(p => p.fila === f && p.columna === c);
+        if (mv){
+          btn.classList.add(tablero.estaVacia(mv) ? "move-empty" : "move-capture");
+        }
+
+        btn.addEventListener("click", () => onSquareClick(f,c));
+        boardEl.appendChild(btn);
+      }
+    }
+
+    turnDot.className = "turn-dot " + turno.toLowerCase();
+    turnText.textContent = "Turno: " + (turno === BLANCO ? "Blancas" : "Negras");
+
+    trayBlanco.innerHTML = capturadas.BLANCO.length
+      ? capturadas.BLANCO.map(p => `<span class="blanco">${SIMBOLOS_UNICODE.BLANCO[p]}</span>`).join(" ")
+      : "—";
+    trayNegro.innerHTML = capturadas.NEGRO.length
+      ? capturadas.NEGRO.map(p => `<span class="negro">${SIMBOLOS_UNICODE.NEGRO[p]}</span>`).join(" ")
+      : "—";
+  }
+
+  function renderInspector(pieza){
+    if (!pieza){
+      inspectorEmpty.style.display = "block";
+      inspectorBody.classList.remove("active");
+      return;
+    }
+    inspectorEmpty.style.display = "none";
+    inspectorBody.classList.add("active");
+    document.getElementById("inspNombre").textContent = nombrePieza(pieza.getSimbolo());
+    document.getElementById("inspColor").textContent = pieza.color === BLANCO ? "Blanco" : "Negro";
+    document.getElementById("inspSimbolo").textContent = (pieza.color === BLANCO ? "B" : "N") + pieza.getSimbolo();
+    document.getElementById("inspPos").textContent = pieza.posicion.toString();
+    document.getElementById("inspCount").textContent = pieza.movimientosPosibles(tablero).length;
+    document.getElementById("inspClase").textContent = pieza.getClaseJava();
+    document.getElementById("inspDesc").textContent = pieza.getDescripcion();
+  }
+
+  function nombrePieza(simbolo){
+    return { P:"Peón", T:"Torre", C:"Caballo", A:"Alfil", D:"Reina", R:"Rey" }[simbolo] || simbolo;
+  }
+
+  function logMove(piezaMovida, origen, destino, huboCaptura){
+    const empty = logEl.querySelector(".log-empty");
+    if (empty) empty.remove();
+    const li = document.createElement("li");
+    const idx = document.createElement("span");
+    idx.className = "idx";
+    idx.textContent = jugada + ".";
+    const txt = document.createElement("span");
+    const sep = huboCaptura ? "x" : "-";
+    txt.textContent = `${piezaMovida.getSimbolo()} ${origen}${sep}${destino}`;
+    li.appendChild(idx);
+    li.appendChild(txt);
+    logEl.appendChild(li);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function onSquareClick(f, c){
+    const pos = new Posicion(f, c);
+    const pieza = tablero.obtenerPieza(pos);
+
+    // Caso 1: hay una pieza seleccionada y se hace clic en un movimiento válido
+    if (seleccion){
+      const esDestinoValido = movimientosDisponibles.some(p => p.fila === f && p.columna === c);
+      if (esDestinoValido){
+        const piezaMovida = tablero.obtenerPieza(seleccion);
+        const origenTxt = seleccion.toString();
+        const huboCaptura = !tablero.estaVacia(pos);
+        const capturada = tablero.moverPieza(seleccion, pos);
+        if (capturada) capturadas[capturada.color].push(capturada.getSimbolo());
+
+        logMove(piezaMovida, origenTxt, pos.toString(), huboCaptura);
+        if (turno === NEGRO) jugada++;
+
+        turno = contrario(turno);
+        seleccion = null;
+        movimientosDisponibles = [];
+        renderInspector(null);
+        render();
+        return;
+      }
+    }
+
+    // Caso 2: clic en pieza propia -> seleccionar (o cambiar selección)
+    if (pieza && pieza.color === turno){
+      seleccion = pos;
+      movimientosDisponibles = pieza.movimientosPosibles(tablero);
+      renderInspector(pieza);
+      render();
+      return;
+    }
+
+    // Caso 3: clic en cualquier otro lado -> deseleccionar
+    seleccion = null;
+    movimientosDisponibles = [];
+    renderInspector(null);
+    render();
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    posicionInicial();
+    logEl.innerHTML = '<li class="log-empty" style="list-style:none; border:none;">Sin jugadas todavía.</li>';
+    renderInspector(null);
+    render();
+  });
+
+  posicionInicial();
+  render();
+})();
+</script>
+
+</body>
+</html>
